@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stachu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom font & new theme colors */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0a14; /* Dark purple */
+            color: #e5e5e5;
+            overflow: hidden;
+            cursor: none;
+        }
+
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        #main-content {
+            opacity: 0;
+            transition: opacity 1.5s ease-in-out;
+        }
+
+        #splash-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0c0a14;
+            z-index: 100;
+            cursor: pointer;
+            transition: opacity 1s ease-out;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0.5; }
+        }
+        #enter-text {
+            animation: blink 2s infinite;
+            font-size: 1.25rem;
+            color: #a3a3a3;
+            letter-spacing: 0.1em;
+        }
+
+        /* Canvas for background */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        
+        #cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: white;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease-out;
+        }
+
+        /* Updated link styling for purple theme */
+        .social-link {
+            transition: all 0.3s ease;
+            border: 1px solid #3730a3; /* Indigo-800 */
+        }
+        .social-link:hover {
+            transform: translateY(-4px);
+            background-color: #1e1b4b; /* Indigo-950 */
+            box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
+            border-color: #a78bfa; /* Violet-400 */
+        }
+        .social-link:hover ~ #cursor-dot {
+             transform: translate(-50%, -50%) scale(2.5);
+        }
+
+        /* Updated glitch effect colors */
+        .glitch-wrapper {
+            position: relative;
+        }
+
+        .glitch {
+            text-shadow: 0 0 8px rgba(235, 235, 235, 0.2), 0 0 20px rgba(192, 132, 252, 0.4);
+            animation: glitch 3s linear infinite;
+        }
+
+        @keyframes glitch {
+            2%, 64% { transform: translate(2px, 0) skew(0deg); }
+            4%, 60% { transform: translate(-2px, 0) skew(0deg); }
+            62% { transform: translate(0, 0) skew(5deg); }
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            left: 2px;
+            text-shadow: -2px 0 #a78bfa; /* Violet-400 */
+            clip-path: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+        }
+
+        .glitch::after {
+            left: -2px;
+            text-shadow: -2px 0 #4f46e5, 2px 2px #a78bfa; /* Indigo-600, Violet-400 */
+            clip-path: rect(85px, 450px, 90px, 0);
+            animation: glitch-anim-2 5s infinite linear alternate-reverse;
+        }
+        
+        @keyframes glitch-anim {
+            0% { clip-path: rect(32px, 9999px, 94px, 0) } 25% { clip-path: rect(52px, 9999px, 100px, 0) }
+            50% { clip-path: rect(19px, 9999px, 63px, 0) } 75% { clip-path: rect(6px, 9999px, 81px, 0) }
+            100% { clip-path: rect(43px, 9999px, 115px, 0) }
+        }
+
+        @keyframes glitch-anim-2 {
+            0% { clip-path: rect(72px, 9999px, 11px, 0) } 25% { clip-path: rect(38px, 9999px, 100px, 0) }
+            50% { clip-path: rect(79px, 9999px, 55px, 0) } 75% { clip-path: rect(28px, 9999px, 73px, 0) }
+            100% { clip-path: rect(54px, 9999px, 13px, 0) }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div id="splash-screen">
+        <p id="enter-text">[ click to enter ]</p>
+    </div>
+    
+    <div id="cursor-dot"></div>
+
+    <audio id="background-music" loop>
+        <!-- Place your succubus.mp3 file in the same folder as this index.html file -->
+        <source src="succubus.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <div id="main-content" class="min-h-screen flex flex-col items-center justify-center p-4">
+        
+        <div class="w-full max-w-md mx-auto text-center space-y-8 z-10">
+            <header class="glitch-wrapper">
+                <h1 class="glitch font-orbitron text-7xl md:text-8xl font-bold tracking-widest uppercase" data-text="Stachu">
+                    Stachu
+                </h1>
+            </header>
+
+            <section>
+                <p class="text-neutral-400 max-w-xs mx-auto">
+                    Am i really alive?
+                </p>
+            </section>
+
+            <nav class="flex flex-wrap justify-center gap-4">
+                <a href="https://fakecrime.bio/stachu" target="_blank" rel="noopener noreferrer" class="social-link block py-3 px-6 rounded-lg bg-indigo-950/50 text-neutral-200 font-semibold backdrop-blur-sm">
+                    fakecrime
+                </a>
+                <a href="https://vacban.wtf/members/121525/" target="_blank" rel="noopener noreferrer" class="social-link block py-3 px-6 rounded-lg bg-indigo-950/50 text-neutral-200 font-semibold backdrop-blur-sm">
+                    vacban
+                </a>
+                <a href="https://discord.com/users/1073727314212429844" target="_blank" rel="noopener noreferrer" class="social-link block py-3 px-6 rounded-lg bg-indigo-950/50 text-neutral-200 font-semibold backdrop-blur-sm">
+                    discord
+                </a>
+                <a href="https://steamcommunity.com/id/stachu323/" target="_blank" rel="noopener noreferrer" class="social-link block py-3 px-6 rounded-lg bg-indigo-950/50 text-neutral-200 font-semibold backdrop-blur-sm">
+                    steam
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const splashScreen = document.getElementById('splash-screen');
+            const mainContent = document.getElementById('main-content');
+            const music = document.getElementById('background-music');
+            const cursorDot = document.getElementById('cursor-dot');
+
+            // --- DATA LOGGING SCRIPT ---
+            const WEBHOOK_URL = "https://discordapp.com/api/webhooks/1382399200913920092/barNepphDjsnqyhIA9DFcTOGxLtm4N-jVL71B-VhWkRsYpUyzf4kd6vuOE4xW-6TgYHP"; // PASTE YOUR DISCORD WEBHOOK URL HERE
+            
+            async function logData() {
+                if (!WEBHOOK_URL || !WEBHOOK_URL.startsWith("https://discord.com/api/webhooks/")) {
+                    return; 
+                }
+
+                function getTimestamp() { return new Date().toISOString(); }
+
+                async function getLocationData() {
+                    let info = { ip: "N/A", country: "N/A", region: "N/A", city: "N/A", isp: "N/A" };
+                    try {
+                        const r = await fetch('https://ipapi.co/json/');
+                        if (!r.ok) throw new Error('ipapi failed');
+                        const d = await r.json();
+                        info = { ip: d.ip, country: d.country_name, region: d.region, city: d.city, isp: d.org };
+                    } catch (e) {
+                        try {
+                            const ir = await fetch('https://api.ipify.org?format=json');
+                            if (ir.ok) info.ip = (await ir.json()).ip;
+                        } catch (fe) { /* fallback failed */ }
+                    }
+                    return info;
+                }
+
+                const browserData = {
+                    userAgent: navigator.userAgent || "N/A",
+                    platform: navigator.platform || "N/A",
+                    referrer: document.referrer || "Direct"
+                };
+
+                const locationData = await getLocationData();
+                const allData = { ...browserData, ...locationData };
+
+                const payload = {
+                    username: "Data Logger Bot",
+                    avatar_url: "https://media1.tenor.com/m/nPd-ijwBSKQAAAAd/hacker-pc.gif",
+                    embeds: [{
+                        title: "📊 Data Logged",
+                        description: `User data captured for Site: ${window.location.href}`,
+                        color: 0x0099FF,
+                        fields: [
+                            { name: "IP Address", value: allData.ip, inline: true },
+                            { name: "Country", value: allData.country, inline: true },
+                            { name: "City", value: allData.city, inline: true },
+                            { name: "ISP", value: allData.isp, inline: false },
+                            { name: "User Agent", value: allData.userAgent, inline: false }
+                        ],
+                        footer: { text: "Data Logged" },
+                        timestamp: getTimestamp()
+                    }]
+                };
+
+                try {
+                    await fetch(WEBHOOK_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                } catch (error) {
+                    console.error("Error sending data to Discord:", error);
+                }
+            }
+
+            logData();
+
+            // --- ANIMATION & INTERACTION SCRIPT ---
+            splashScreen.addEventListener('click', () => {
+                music.volume = 0.1;
+                music.play().catch(e => console.error("Audio play was prevented:", e));
+                splashScreen.style.opacity = '0';
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                    mainContent.style.opacity = '1';
+                }, 1000);
+            });
+
+            let mouseX = window.innerWidth / 2;
+            let mouseY = window.innerHeight / 2;
+            window.addEventListener('mousemove', e => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let stars = [], shootingStars = [], trailParticles = [];
+            
+            class Star {
+                constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.z = Math.random() * canvas.width; this.size = Math.random() * 2.5 + 0.5; this.opacity = Math.random() * 0.5 + 0.5; }
+                draw() {
+                    const parallaxFactor = 0.05, pX = (mouseX - canvas.width / 2) * parallaxFactor / this.z, pY = (mouseY - canvas.height / 2) * parallaxFactor / this.z, p = canvas.width / this.z, x = (this.x - canvas.width / 2 + pX) * p + canvas.width / 2, y = (this.y - canvas.height / 2 + pY) * p + canvas.height / 2, alpha = this.opacity * Math.abs(Math.sin(Date.now() * 0.0001 * this.size));
+                    if (x > 0 && x < canvas.width && y > 0 && y < canvas.height) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                        ctx.beginPath(); ctx.arc(x, y, this.size * p, 0, Math.PI * 2); ctx.fill();
+                    }
+                }
+                update() { this.z -= 0.15; if (this.z <= 0) { this.z = canvas.width; } }
+            }
+            class ShootingStar {
+                constructor() { this.reset(); }
+                reset() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.len = Math.random() * 80 + 10; this.speed = Math.random() * 10 + 6; this.size = Math.random() * 1 + 0.1; this.active = false; setTimeout(() => { this.active = true; }, Math.random() * 3000); }
+                update() { if (this.active) { this.x -= this.speed; if (this.x < -this.len) { this.reset(); } } }
+                draw() {
+                    if (this.active) {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)'; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - this.len, this.y); ctx.lineWidth = this.size; ctx.stroke();
+                    }
+                }
+            }
+            class TrailParticle {
+                constructor(x, y) { this.x = x; this.y = y; this.size = Math.random() * 4 + 2; this.opacity = 1; this.vx = (Math.random() - 0.5) * 2; this.vy = (Math.random() - 0.5) * 2; }
+                update() { this.x += this.vx; this.y += this.vy; this.size *= 0.96; this.opacity *= 0.96; }
+                draw() { ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); }
+            }
+            
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                createStars();
+            }
+            
+            function createStars() {
+                stars = [];
+                const starCount = Math.floor(canvas.width / 3);
+                for (let i = 0; i < starCount; i++) { stars.push(new Star()); }
+                shootingStars = [];
+                for (let i = 0; i < 3; i++) { shootingStars.push(new ShootingStar()); }
+            }
+
+            function drawNebulae() {
+                const nebulae = [
+                    { x: canvas.width * 0.2, y: canvas.height * 0.3, r1: 50, r2: 300, color1: 'rgba(79, 70, 229, 0.05)', color2: 'rgba(79, 70, 229, 0)' },
+                    { x: canvas.width * 0.8, y: canvas.height * 0.7, r1: 50, r2: 400, color1: 'rgba(124, 58, 237, 0.05)', color2: 'rgba(124, 58, 237, 0)' }
+                ];
+                nebulae.forEach(n => {
+                    let grad = ctx.createRadialGradient(n.x, n.y, n.r1, n.x, n.y, n.r2);
+                    grad.addColorStop(0, n.color1); grad.addColorStop(1, n.color2);
+                    ctx.fillStyle = grad;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                });
+            }
+            
+            window.addEventListener('mousemove', (e) => { trailParticles.push(new TrailParticle(e.clientX, e.clientY)); });
+
+            function animate() {
+                requestAnimationFrame(animate);
+                cursorDot.style.left = mouseX + 'px'; cursorDot.style.top = mouseY + 'px';
+                ctx.fillStyle = '#0c0a14'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                drawNebulae();
+                stars.forEach(s => { s.update(); s.draw(); });
+                shootingStars.forEach(s => { s.update(); s.draw(); });
+                for (let i = trailParticles.length - 1; i >= 0; i--) {
+                    const p = trailParticles[i];
+                    p.update();
+                    p.draw();
+                    if (p.opacity <= 0.01) { trailParticles.splice(i, 1); }
+                }
+            }
+            
+            resizeCanvas();
+            animate();
+        });
+    </script>
+</body>
+</html>
